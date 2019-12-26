@@ -1,5 +1,6 @@
 import os
 import torch
+from torch.nn import functional as F
 from dataset import return_MVTecAD_loader
 from network import VAE,loss_function
 import matplotlib.pyplot as plt
@@ -25,8 +26,30 @@ def eval(model,test_loader,device):
         x_vae = model(x_0.to(device)).detach().cpu().numpy()
 
 
+def EBM(model,test_loader,device):
+    model.train()
+    x_0 = iter(test_loader).next()
+    alpha = 0.05
+    lamda = 1
+    x_0 = x_0.to(device).clone().detach().requires_grad_(True)
+    recon_x = model(x_0).detach()
+    loss = F.binary_cross_entropy(x_0, recon_x, reduction='sum')  
+    loss.backward(retain_graph=True)
+
+    x_grad = x_0.grad.data
+    x_t = x_0 - alpha * x_grad * (x_0 - recon_x) ** 2
+
+    for i in range(15):
+        recon_x = model(x_t).detach()
+        loss = F.binary_cross_entropy(x_t, recon_x, reduction='sum') + lamda * torch.abs(x_t - x_0).sum()
+        loss.backward(retain_graph=True)
+
+        x_grad = x_0.grad.data
+        x_t = x_t - eps * x_grad * (x_t - recon_x) ** 2
+        iterative_plot(x_t.detach().cpu().numpy(), i)
+
         
-# gif作成用
+# gif
 def iterative_plot(x_t, j):
     plt.figure(figsize=(15, 4))
     for i in range(10):
@@ -64,22 +87,4 @@ def main():
     test_loader = return_MVTecAD_loader("./mvtec_anomaly_detection/grid/test/metal_contamination/", batch_size=10, train=False)    
     eval(model=model,test_loader=test_loader)
     
-    alpha = 0.05
-    lamda = 1
-
-    x_0 = x_0.to(device).clone().detach().requires_grad_(True)
-    recon_x = model(x_0).detach()
-    loss = F.binary_cross_entropy(x_0, recon_x, reduction='sum')  
-    loss.backward(retain_graph=True)
-
-    x_grad = x_0.grad.data
-    x_t = x_0 - alpha * x_grad * (x_0 - recon_x) ** 2
-
-    for i in range(15):
-        recon_x = model(x_t).detach()
-        loss = F.binary_cross_entropy(x_t, recon_x, reduction='sum') + lamda * torch.abs(x_t - x_0).sum()
-        loss.backward(retain_graph=True)
-
-        x_grad = x_0.grad.data
-        x_t = x_t - eps * x_grad * (x_t - recon_x) ** 2
-        iterative_plot(x_t.detach().cpu().numpy(), i)
+    
