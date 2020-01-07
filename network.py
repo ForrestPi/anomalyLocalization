@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-
+from torch.nn import functional as F
 class VAE(nn.Module):
 
     def __init__(self, z_dim=128):
