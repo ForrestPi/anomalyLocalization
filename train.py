@@ -59,7 +59,7 @@ def iterative_plot(x_t, j):
         plt.imshow(x_t[i][0], cmap=plt.cm.gray)
     plt.subplots_adjust(wspace=0., hspace=0.)        
     plt.savefig("./results/{}.png".format(j))
-    plt.show()
+    #plt.show()
     
 def main():
     train_loader = return_MVTecAD_loader("./mvtec_anomaly_detection/grid/train/good/")
@@ -86,5 +86,6 @@ def main():
     
     test_loader = return_MVTecAD_loader("./mvtec_anomaly_detection/grid/test/metal_contamination/", batch_size=10, train=False)    
     eval(model=model,test_loader=test_loader)
+    EBM(model,test_loader,device)
     
     
